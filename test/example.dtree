@@ -1,0 +1,13 @@
+[start] Welcome to this dtree file
+[start (gym)->gym] Go to the gym
+[start (videogames)->games] Play videogames
+
+[gym] You made it to the gym! What a loser lol. Game over.
+
+[games] Which game would you like to play?
+[games (cs)->cs] Counter Strike
+[games (cod)->cod] Call of Duty
+
+[cs] Lmao what a shitty game. You got rekt. Game over.
+
+[cod] You have 12 year old noobs scream at you because of the size of your mother. Wonderful.

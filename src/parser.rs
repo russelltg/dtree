@@ -66,13 +66,17 @@ fn desc_text(input: &[u8]) -> IResult<&[u8], String> {
 }
 
 named!(section_desc<PartialDTree>,
-    ws!(do_parse!(
+    do_parse!(
+        opt!(space) >>
         tag!("[") >>
+        opt!(space) >>
         n: identifier >>
+        opt!(space) >>
         tag!("]") >>
+        opt!(space) >>
         m: desc_text >>
         (PartialDTree{name: String::from(n), description: m})
-    ))
+    )
 );
 
 fn mapping_name(input: &[u8]) -> IResult<&[u8], String> {
@@ -99,26 +103,28 @@ fn mapping_name(input: &[u8]) -> IResult<&[u8], String> {
     return IResult::Done(&b""[..], s);
 }
 
-named!(spaceeater<Option<&[u8]>>,
-    opt!(space)
-);
 
 named!(mapping<PartialDTreeOption>,
-    sep!(spaceeater, do_parse!(
+    do_parse!(
+        opt!(space) >>
         tag!("[") >>
+        opt!(space) >>
         n: identifier >>
-        name: delimited!(
-            tag!("("),
-            mapping_name,
-            tag!(")")
-        ) >>
+        opt!(space) >>
+        tag!("(") >>
+        name: mapping_name >>
+        tag!(")") >>
+        opt!(space) >>
         tag!("->") >>
+        opt!(space) >>
         to: identifier >>
+        opt!(space) >>
         tag!("]") >>
+        opt!(space) >>
         m: desc_text >>
         (PartialDTreeOption{parent: String::from(n), description: m,
             opt_name: name, dest: String::from(to)})
-    ))
+    )
 );
 
 pub fn dtree_parse(input: &[u8]) -> IResult<&[u8], Tree, String> {
@@ -234,7 +240,7 @@ fn parse_desc_test() {
 
 #[test]
 fn section_test() {
-    assert_eq!(section_desc(b"[ a ] hello \nasdf"), IResult::Done(&b"asdf"[..], PartialDTree{
+    assert_eq!(section_desc(b"[ a ] hello \nasdf"), IResult::Done(&b"\nasdf"[..], PartialDTree{
         name: String::from("a"), description: String::from("hello ")}));
     assert_eq!(section_desc(b"[a] hello\\\naaaa"), IResult::Done(&b""[..], PartialDTree{
         name: String::from("a"), description: String::from("hello\naaaa")}));
@@ -242,12 +248,12 @@ fn section_test() {
 
 #[test]
 fn mapping_test() {
-    assert_eq!(mapping(b" [ a ( b ) -> c ] adf"), IResult::Done(&b""[..], PartialDTreeOption{
+    assert_eq!(mapping(b" [ a (b) -> c ] adf"), IResult::Done(&b""[..], PartialDTreeOption{
         parent: String::from("a"), description: String::from("adf"),
         opt_name: String::from("b"), dest: String::from("c")}));
 
     assert_eq!(mapping(b"[ a123 (b\\))->c] adf \\\nhello\na"),
-        IResult::Done(&b"a"[..], PartialDTreeOption{parent: String::from("a123"),
+        IResult::Done(&b"\na"[..], PartialDTreeOption{parent: String::from("a123"),
         description: String::from("adf \nhello"), opt_name: String::from("b)"),
         dest: String::from("c")}));
 
