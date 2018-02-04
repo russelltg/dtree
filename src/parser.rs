@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::fmt::Debug;
 
-use nom::{space, multispace, alphanumeric, IResult, ErrorKind};
+use nom::{space, multispace, IResult, ErrorKind};
 
 use dtree::{Tree, Section, Mapping};
 
@@ -85,7 +85,7 @@ fn escaped_until(input_u8: &[u8], until: char) -> IResult<&[u8], String> {
 
     let input = match str::from_utf8(input_u8) {
         Ok(t) => t,
-        Err(e) => return IResult::Error(ErrorKind::Custom(31)),
+        Err(_) => return IResult::Error(ErrorKind::Custom(31)),
     };
 
     let mut s = String::new();
