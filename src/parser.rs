@@ -6,7 +6,7 @@ use std::fmt::Debug;
 
 use nom::{space, multispace, alphanumeric, IResult, ErrorKind};
 
-use dtree::{Tree, Node, Mapping};
+use dtree::{Tree, Section, Mapping};
 
 #[derive(Debug)]
 struct PartialDTreeOption {
@@ -156,15 +156,15 @@ fn dtree_parse_impl(input: &[u8]) -> IResult<&[u8], Tree, String> {
 
     let mut in_mut = input;
 
-    let mut sects: Vec<PartialDTree> = Vec::new();
-    let mut maps: Vec<PartialDTreeOption> = Vec::new();
+    let mut sects_partial: Vec<PartialDTree> = Vec::new();
+    let mut maps_partial: Vec<PartialDTreeOption> = Vec::new();
 
     loop {
         // see if it parses as a mapping
         match mapping(in_mut) {
             IResult::Done(i, o) => {
                 in_mut = i;
-                maps.push(o);
+                maps_partial.push(o);
                 continue;
             }
             IResult::Error(_) => {}
@@ -178,7 +178,7 @@ fn dtree_parse_impl(input: &[u8]) -> IResult<&[u8], Tree, String> {
         match section_desc(in_mut) {
             IResult::Done(i, o) => {
                 in_mut = i;
-                sects.push(o);
+                sects_partial.push(o);
                 continue;
             }
             IResult::Error(_) => {
@@ -191,18 +191,18 @@ fn dtree_parse_impl(input: &[u8]) -> IResult<&[u8], Tree, String> {
     }
 
     // Link
-    let mut nodes: HashMap<String, Node> = HashMap::new();
+    let mut sections = HashMap::<String, Section>::new();
 
-    for s in sects {
+    for s in sects_partial {
         // make sure it doesn't exist yet
-        match nodes.entry(s.name.clone()) {
+        match sections.entry(s.name.clone()) {
             Occupied(_) => {
                 return IResult::Error(ErrorKind::Custom(
-                    format!("Node '{}' already has a description", s.name),
+                    format!("Section '{}' already has a description", s.name),
                 ))
             }
             Vacant(e) => {
-                e.insert(Node {
+                e.insert(Section {
                     name: s.name,
                     description: s.description,
                     mappings: HashMap::new(),
@@ -212,19 +212,19 @@ fn dtree_parse_impl(input: &[u8]) -> IResult<&[u8], Tree, String> {
     }
 
     // Make all mappings
-    for m in maps {
+    for m in maps_partial {
         // make sure the destination exists
-        if !nodes.contains_key(&m.dest) {
+        if !sections.contains_key(&m.dest) {
             return IResult::Error(ErrorKind::Custom(
-                format!("Destinaton '{}' for mapping ({})->{} in node '{}' does not exist",
+                format!("Destinaton '{}' for mapping ({})->{} in section '{}' does not exist",
                 m.dest, m.opt_name, m.dest, m.parent),
             ));
         }
 
-        match nodes.entry(m.parent.clone()) {
+        match sections.entry(m.parent.clone()) {
             Vacant(_) => {
                 return IResult::Error(ErrorKind::Custom(
-                    format!("Node '{}' does not exist, and a mapping ({})->{} was created for it",
+                    format!("Section '{}' does not exist, and a mapping ({})->{} was created for it",
                 m.parent, m.opt_name, m.dest),
                 ))
             }
@@ -241,13 +241,12 @@ fn dtree_parse_impl(input: &[u8]) -> IResult<&[u8], Tree, String> {
         };
     }
 
-    return IResult::Done(in_mut, Tree { nodes });
+    return IResult::Done(in_mut, Tree { sections });
 }
 
 /// Parse a dtree file 
 /// if `input` complies to the specification (defined in Spec.md)
 /// Then it will pase correctly
-/// 
 pub fn parse_dtree (input: &str) -> Result<Tree, Box<Debug>> {
     match dtree_parse_impl(input.as_bytes()) {
         IResult::Done(_, t) => return Result::Ok(t),

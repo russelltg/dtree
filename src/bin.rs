@@ -41,17 +41,17 @@ fn main() {
     // run the dtree
 
     // find the root node
-    let mut current_node = match dtree.nodes.get("start") {
+    let mut current_section = match dtree.sections.get("start") {
         Some(n) => n,
-        None => return eprintln!("No start node")
+        None => return eprintln!("No start section")
     };
 
 
     loop {
-        println!("{}", current_node.description);
+        println!("{}", current_section.description);
 
         // print the options
-        for (name, mapping) in &current_node.mappings {
+        for (name, mapping) in &current_section.mappings {
             println!("({}) {}", name, mapping.description.replace("\n",
                 &(String::from("\n") + &String::from(" ".repeat(name.len() + 3))) ));
         }
@@ -65,9 +65,9 @@ fn main() {
         // read_line gets the newline, remove that
         input.pop();
 
-        match current_node.mappings.get(&input) {
+        match current_section.mappings.get(&input) {
             Some(mapping) => {
-                current_node = match dtree.nodes.get(&mapping.to) {
+                current_section = match dtree.sections.get(&mapping.to) {
                     Some(n) => n,
                     None => panic!("Internal error: invalid to reference")
                 };
