@@ -3,7 +3,7 @@ use std::cmp::PartialEq;
 use std::collections::HashMap;
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 
-use nom::{space, alphanumeric, IResult, ErrorKind};
+use nom::{space, multispace, alphanumeric, IResult, ErrorKind};
 
 use dtree::{Tree, Node, Mapping};
 
@@ -66,16 +66,18 @@ fn desc_text(input: &[u8]) -> IResult<&[u8], String> {
 }
 
 named!(section_desc<PartialDTree>,
-    do_parse!(
-        opt!(space) >>
-        tag!("[") >>
-        opt!(space) >>
-        n: identifier >>
-        opt!(space) >>
-        tag!("]") >>
-        opt!(space) >>
-        m: desc_text >>
-        (PartialDTree{name: String::from(n), description: m})
+    dbg!(
+        do_parse!(
+            opt!(multispace) >>
+            tag!("[") >>
+            opt!(space) >>
+            n: identifier >>
+            opt!(space) >>
+            tag!("]") >>
+            opt!(space) >>
+            m: desc_text >>
+            (PartialDTree{name: String::from(n), description: m})
+        )
     )
 );
 
@@ -105,25 +107,27 @@ fn mapping_name(input: &[u8]) -> IResult<&[u8], String> {
 
 
 named!(mapping<PartialDTreeOption>,
-    do_parse!(
-        opt!(space) >>
-        tag!("[") >>
-        opt!(space) >>
-        n: identifier >>
-        opt!(space) >>
-        tag!("(") >>
-        name: mapping_name >>
-        tag!(")") >>
-        opt!(space) >>
-        tag!("->") >>
-        opt!(space) >>
-        to: identifier >>
-        opt!(space) >>
-        tag!("]") >>
-        opt!(space) >>
-        m: desc_text >>
-        (PartialDTreeOption{parent: String::from(n), description: m,
-            opt_name: name, dest: String::from(to)})
+    dbg_dmp!(
+        do_parse!(
+            opt!(multispace) >>
+            tag!("[") >>
+            opt!(space) >>
+            n: identifier >>
+            opt!(space) >>
+            tag!("(") >>
+            name: mapping_name >>
+            tag!(")") >>
+            opt!(space) >>
+            tag!("->") >>
+            opt!(space) >>
+            to: identifier >>
+            opt!(space) >>
+            tag!("]") >>
+            opt!(space) >>
+            m: desc_text >>
+            (PartialDTreeOption{parent: String::from(n), description: m,
+                opt_name: name, dest: String::from(to)})
+        )
     )
 );
 
