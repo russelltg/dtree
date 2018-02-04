@@ -5,8 +5,8 @@ use dtree::parser::dtree_parse;
 
 use std::env;
 use std::fs::File;
-use std::io::prelude::Read;
-use std::io::stdin;
+use std::io::prelude::{Read, Write};
+use std::io::{stdin, stdout};
 
 use nom::IResult::*;
 
@@ -59,6 +59,8 @@ fn main() {
             println!("({}) {}", name, mapping.description.replace("\n",
                 &(String::from("\n") + &String::from(" ".repeat(name.len() + 3))) ));
         }
+        print!("> ");
+        stdout().flush().expect("Could not flush stdout");
 
         // get input
         let mut input = String::new();
