@@ -1,0 +1,19 @@
+[start] Welcome to Russell's game! Where would you like to go?
+[start (tree)->waytotree] To the tree
+[start (home)->home] To home
+[start (park)->park] To the park
+
+
+[waytotree] As you walk towards the tree, you trip! \
+Your foot starts hurting so much you can't help but secrete a small gasp. \
+What do you do?
+[waytotree (call 911)->911] Call 911
+[waytotree (deal)->deal] Deal with the pain
+
+[911] You called 911. \
+911 Operator: "911 what is your emergency?" \
+What do you say?
+[911 (nevermind)->deal] "Nevermind"
+[911 (ambulance)->ambulance] "My foot is broken! Get me an ambulance"
+
+[ambulance] You got to the ambulance!

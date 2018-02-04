@@ -1,0 +1,15 @@
+[package]
+name = "dtree"
+version = "0.1.0"
+authors = ["Russell Greene <russellgreene8@gmail.com>"]
+
+[dependencies]
+nom = "^3.2"
+
+[lib]
+name = "dtree"
+path = "src/lib.rs"
+
+[[bin]]
+name = "dtree"
+path = "src/bin.rs"
