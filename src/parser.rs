@@ -2,6 +2,7 @@ use std::str;
 use std::cmp::PartialEq;
 use std::collections::HashMap;
 use std::collections::hash_map::Entry::{Occupied, Vacant};
+use std::fmt::Debug;
 
 use nom::{space, multispace, alphanumeric, IResult, ErrorKind};
 
@@ -34,36 +35,35 @@ impl PartialEq for PartialDTree {
     }
 }
 
-named!(identifier<&str>,
-    map_res!(
-        alphanumeric,
-        str::from_utf8
-    )
-);
+fn identifier(input_u8: &[u8]) -> IResult<&[u8], &str> {
 
-fn desc_text(input: &[u8]) -> IResult<&[u8], String> {
-    let mut s = String::new();
-    let mut i = 0;
+    let input = match str::from_utf8(input_u8) {
+        Err(_) => return IResult::Error(ErrorKind::Custom(13)),
+        Ok(t) => t
+    };
 
-    while i < input.len() {
-        if i < input.len() - 1 && input[i] == '\\' as u8 && input[i + 1] == '\n' as u8 {
-            s.push('\n');
+    let mut bytes_i: usize = 0;
+    let mut last_size: usize = 0;
 
-            i += 2;
-            continue;
+    for c in input.chars() {
+        if (!c.is_alphabetic() && !c.is_numeric() && c != '_' && c != '-') {
+            break;
         }
-
-        // if we've reacehd a newline, stop
-        if input[i] == '\n' as u8 {
-            return IResult::Done(&input[i..], s);
-        }
-
-        s.push(input[i] as char);
-        i += 1;
+        bytes_i += c.len_utf8();
+        last_size = c.len_utf8();
     }
 
-    return IResult::Done(&b""[..], s);
+    // bytes_i - last_size + 1 because not all chars are 1 long
+    return IResult::Done(&input_u8[bytes_i..], &input[0..bytes_i - last_size + 1])
 }
+
+named!(desc_text<String>,
+    call!(escaped_until, '\n')
+);
+
+named!(mapping_name<String>,
+    call!(escaped_until, ')')
+);
 
 named!(section_desc<PartialDTree>,
     do_parse!(
@@ -80,25 +80,47 @@ named!(section_desc<PartialDTree>,
 
 );
 
-fn mapping_name(input: &[u8]) -> IResult<&[u8], String> {
+/// Parse any utf-8 character until `until` is reached. Allows escaping of `until` with \
+fn escaped_until(input_u8: &[u8], until: char) -> IResult<&[u8], String> {
+
+    let input = match str::from_utf8(input_u8) {
+        Ok(t) => t,
+        Err(e) => return IResult::Error(ErrorKind::Custom(31)),
+    };
+
     let mut s = String::new();
-    let mut i = 0;
 
-    while i < input.len() {
-        if i < input.len() - 1 && input[i] == '\\' as u8 && input[i + 1] == ')' as u8 {
-            s.push(')');
+    let mut iter = input.chars().peekable();
 
-            i += 2;
-            continue;
+    let mut bytes_i: usize = 0;
+
+    loop {
+
+        let c = match iter.next() {
+            Some(n) => n,
+            None => break,
+        };
+
+
+        match iter.peek() {
+            Some(&a) if c == '\\' && a == until  => {
+                s.push(until);
+                iter.next();
+
+                bytes_i += 1 + until.len_utf8(); // \ is a 1-byte char
+
+                continue;
+            },
+            _ => {}
         }
 
-        // if we've reacehd a newline, stop
-        if input[i] == ')' as u8 {
-            return IResult::Done(&input[i..], s);
+        // if we've reacehd a end character, stop
+        if c == until {
+            return IResult::Done(&input_u8[bytes_i..], s);
         }
 
-        s.push(input[i] as char);
-        i += 1;
+        bytes_i += c.len_utf8();
+        s.push(c);
     }
 
     return IResult::Done(&b""[..], s);
@@ -129,7 +151,8 @@ named!(mapping<PartialDTreeOption>,
 
 );
 
-pub fn dtree_parse(input: &[u8]) -> IResult<&[u8], Tree, String> {
+
+fn dtree_parse_impl(input: &[u8]) -> IResult<&[u8], Tree, String> {
 
     let mut in_mut = input;
 
@@ -221,6 +244,18 @@ pub fn dtree_parse(input: &[u8]) -> IResult<&[u8], Tree, String> {
     return IResult::Done(in_mut, Tree { nodes });
 }
 
+/// Parse a dtree file 
+/// if `input` complies to the specification (defined in Spec.md)
+/// Then it will pase correctly
+/// 
+pub fn parse_dtree (input: &str) -> Result<Tree, Box<Debug>> {
+    match dtree_parse_impl(input.as_bytes()) {
+        IResult::Done(_, t) => return Result::Ok(t),
+        IResult::Error(e) => return Result::Err(Box::new(e)),
+        IResult::Incomplete(i) => return Result::Err(Box::new(i))
+    }
+}
+
 
 #[test]
 fn parse_identifier_test() {
@@ -229,12 +264,14 @@ fn parse_identifier_test() {
     assert_eq!(identifier(b"asdf123"), IResult::Done(&b""[..], "asdf123"));
     assert_eq!(identifier(b"asd 12f"), IResult::Done(&b" 12f"[..], "asd"));
     assert_eq!(identifier(b"asd^f"), IResult::Done(&b"^f"[..], "asd"));
+    assert_eq!(identifier(b"a_d^f"), IResult::Done(&b"^f"[..], "a_d"));
+    assert_eq!(identifier("a京d^f".as_bytes()), IResult::Done(&b"^f"[..], "a京d"));
 }
 
 #[test]
 fn parse_desc_test() {
 
-    assert_eq!(desc_text(b"hiboi\\\na"), IResult::Done(&b""[..], String::from("hiboi\na")));
+    assert_eq!(desc_text("💝hiboi\\\na".as_bytes()), IResult::Done(&b""[..], String::from("💝hiboi\na")));
     assert_eq!(desc_text(b"hiboi\na"), IResult::Done(&b"\na"[..], String::from("hiboi")));
     assert_eq!(desc_text(b"\\hiboi\\\na"), IResult::Done(&b""[..], String::from("\\hiboi\na")));
     assert_eq!(desc_text(b"hello \nasdf"), IResult::Done(&b"\nasdf"[..], String::from("hello ")));
@@ -254,9 +291,9 @@ fn mapping_test() {
         parent: String::from("a"), description: String::from("adf"),
         opt_name: String::from("b"), dest: String::from("c")}));
 
-    assert_eq!(mapping(b"[ a123 (b\\))->c] adf \\\nhello\na"),
+    assert_eq!(mapping(b"[ a123 (b\\)a\\d)->c] adf \\\nhello\na"),
         IResult::Done(&b"\na"[..], PartialDTreeOption{parent: String::from("a123"),
-        description: String::from("adf \nhello"), opt_name: String::from("b)"),
+        description: String::from("adf \nhello"), opt_name: String::from("b)a\\d"),
         dest: String::from("c")}));
 
 }

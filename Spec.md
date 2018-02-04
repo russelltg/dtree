@@ -7,13 +7,13 @@ This document uses [Extended Backus-Naur Form](https://en.wikipedia.org/wiki/Ext
 ## Basic definitions
 
 ```EBNF
-unicode_letter = /* A unicode code point classified as "Letter" */
-unicode_digit = /* A unicode code point classified as "Number, decimal digit" */
-unicode_char = /* Any unicode point /*
+unicode_letter = (* A unicode code point classified as "Letter" *)
+unicode_digit = (* A unicode code point classified as "Number, decimal digit" *)
+unicode_char = (* Any unicode point *)
 
 letter = unicode_letter | "_"
-space = " " | "\t"
-newline = "\n"
+space = " " | (* tab character *)
+newline = (* newline character *)
 ```
 
 ## Identifiers
@@ -21,7 +21,7 @@ newline = "\n"
 An identifier is used to name a section. It has the form:
 
 ```EBNF
-identifier = ( unicode_letter | unicode_digit) { unicode_letter | unicode_digit }
+identifier = ( unicode_letter | unicode_digit ) { unicode_letter | unicode_digit }
 ```
 
 Examples:
@@ -39,7 +39,7 @@ Defining a message has the form:
 This must take place at the beginning of a line--the `[` must be the first character of the line
 
 ```EBNF
-section_message = "[" { space } identifier { space } "]" [ " " { unicode_char } ]
+section_message = "[", { space }, identifier { space } "]" [ " " { unicode_char } ]
 ```
 
 Examples
@@ -70,7 +70,7 @@ Reason: Cannot start a line with `[`
 This must take place at the beginning of a line--the `[` must be the first character of the line
 
 ```EBNF
-"[" { space } identifier space { space } "(" {unicode_char - ")\n"} ")" {space} "->" {space} identifier {space} "]" [ space { unicode_char }]
+mapping = "[" { space } identifier { space } "(" {unicode_char - ")\n"} ")" {space} "->" {space} identifier {space} "]" [ space { unicode_char }]
 ```
 
 Examples:

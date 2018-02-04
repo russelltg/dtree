@@ -1,7 +1,9 @@
 [package]
 name = "dtree"
+description = "Dialog tree file format + parser + executor"
 version = "0.1.0"
 authors = ["Russell Greene <russellgreene8@gmail.com>"]
+license-file = "LICENSE"
 
 [dependencies]
 nom = "^3.2"

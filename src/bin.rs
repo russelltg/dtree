@@ -1,14 +1,11 @@
 extern crate dtree;
-extern crate nom;
 
-use dtree::parser::dtree_parse;
+use dtree::parser::parse_dtree;
 
 use std::env;
 use std::fs::File;
 use std::io::prelude::{Read, Write};
 use std::io::{stdin, stdout};
-
-use nom::IResult::*;
 
 fn main() {
     let args: Vec<_> = env::args().collect();
@@ -36,10 +33,9 @@ fn main() {
     };
 
     // parse
-    let dtree = match dtree_parse(dtree_text.as_bytes()) {
-        Done(_, o) => o,
-        Incomplete(_) => return eprintln!("Failed to parse--incomplete"),
-        Error(e) => return eprintln!("Failed to parse {:?}", e)
+    let dtree = match parse_dtree(&dtree_text) {
+        Ok(o) => o,
+        Err(e) => return eprintln!("Failed to parse: {:?}", e),
     };
 
     // run the dtree
