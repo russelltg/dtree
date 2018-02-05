@@ -5,7 +5,7 @@
 [gym] You made it to the gym! What a loser lol. Game over.
 
 [games] Which game would you like to play?
-[games (cs)->cs] Counter Strike
+[games (cs)|(counter strike)->cs] Counter Strike
 [games (cod)->cod] Call of Duty
 
 [cs] Lmao what a shitty game. You got rekt. Game over.

@@ -51,9 +51,9 @@ fn main() {
         println!("{}", current_section.description);
 
         // print the options
-        for (name, mapping) in &current_section.mappings {
-            println!("({}) {}", name, mapping.description.replace("\n",
-                &(String::from("\n") + &String::from(" ".repeat(name.len() + 3))) ));
+        for mapping in &current_section.mappings {
+            println!("({:?}) {}", mapping.triggers, mapping.description.replace("\n",
+                &(String::from("\n") + &String::from(" ".repeat(mapping.triggers.len() + 3))) ));
         }
         print!("> ");
         stdout().flush().expect("Could not flush stdout");
@@ -65,9 +65,9 @@ fn main() {
         // read_line gets the newline, remove that
         input.pop();
 
-        match current_section.mappings.get(&input) {
-            Some(mapping) => {
-                current_section = match dtree.sections.get(&mapping.to) {
+        match current_section.mapping(&input) {
+            Some(to) => {
+                current_section = match dtree.sections.get(to) {
                     Some(n) => n,
                     None => panic!("Internal error: invalid to reference")
                 };

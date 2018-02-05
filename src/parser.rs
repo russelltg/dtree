@@ -1,5 +1,4 @@
 use std::str;
-use std::cmp::PartialEq;
 use std::collections::HashMap;
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::fmt::Debug;
@@ -8,31 +7,18 @@ use nom::{space, multispace, IResult, ErrorKind};
 
 use dtree::{Tree, Section, Mapping};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 struct PartialDTreeOption {
     parent: String,
     description: String,
-    opt_name: String,
+    triggers: Vec<String>,
     dest: String,
 }
 
-impl PartialEq for PartialDTreeOption {
-    fn eq(&self, other: &PartialDTreeOption) -> bool {
-        return self.parent == other.parent && self.description == other.description &&
-            self.opt_name == other.opt_name && self.dest == other.dest;
-    }
-}
-
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 struct PartialDTree {
     name: String,
     description: String,
-}
-
-impl PartialEq for PartialDTree {
-    fn eq(&self, other: &PartialDTree) -> bool {
-        return self.description == other.description && self.name == other.name;
-    }
 }
 
 fn identifier(input_u8: &[u8]) -> IResult<&[u8], &str> {
@@ -46,7 +32,7 @@ fn identifier(input_u8: &[u8]) -> IResult<&[u8], &str> {
     let mut last_size: usize = 0;
 
     for c in input.chars() {
-        if (!c.is_alphabetic() && !c.is_numeric() && c != '_' && c != '-') {
+        if !c.is_alphabetic() && !c.is_numeric() && c != '_' && c != '-' {
             break;
         }
         bytes_i += c.len_utf8();
@@ -126,6 +112,28 @@ fn escaped_until(input_u8: &[u8], until: char) -> IResult<&[u8], String> {
     return IResult::Done(&b""[..], s);
 }
 
+/// Parses something in the form
+named!(trigger_from<Vec<String>>,
+    separated_list!(tag!("|"),
+        do_parse!(
+            opt!(space) >>
+            tag!("(") >>
+            n: mapping_name >>
+            tag!(")") >>
+            opt!(space) >>
+            (n)
+        )
+    )
+);
+
+named!(trigger_to<&str>,
+    do_parse!(
+        tag!("->") >>
+        opt!(space) >>
+        to: identifier >>
+        (to)
+    )
+);
 
 named!(mapping<PartialDTreeOption>,
     do_parse!(
@@ -134,19 +142,15 @@ named!(mapping<PartialDTreeOption>,
         opt!(space) >>
         n: identifier >>
         opt!(space) >>
-        tag!("(") >>
-        name: mapping_name >>
-        tag!(")") >>
+        from: trigger_from >>
         opt!(space) >>
-        tag!("->") >>
-        opt!(space) >>
-        to: identifier >>
+        to: trigger_to >>
         opt!(space) >>
         tag!("]") >>
         opt!(space) >>
         m: desc_text >>
         (PartialDTreeOption{parent: String::from(n), description: m,
-            opt_name: name, dest: String::from(to)})
+            triggers: from, dest: String::from(to)})
     )
 
 );
@@ -205,7 +209,7 @@ fn dtree_parse_impl(input: &[u8]) -> IResult<&[u8], Tree, String> {
                 e.insert(Section {
                     name: s.name,
                     description: s.description,
-                    mappings: HashMap::new(),
+                    mappings: Vec::new(),
                 })
             }
         };
@@ -216,23 +220,23 @@ fn dtree_parse_impl(input: &[u8]) -> IResult<&[u8], Tree, String> {
         // make sure the destination exists
         if !sections.contains_key(&m.dest) {
             return IResult::Error(ErrorKind::Custom(
-                format!("Destinaton '{}' for mapping ({})->{} in section '{}' does not exist",
-                m.dest, m.opt_name, m.dest, m.parent),
+                format!("Destinaton {} for mapping ({:?})->{} in section {} does not exist",
+                m.dest, m.triggers, m.dest, m.parent),
             ));
         }
 
         match sections.entry(m.parent.clone()) {
             Vacant(_) => {
                 return IResult::Error(ErrorKind::Custom(
-                    format!("Section '{}' does not exist, and a mapping ({})->{} was created for it",
-                m.parent, m.opt_name, m.dest),
+                    format!("Section {} does not exist, and a mapping ({:?})->{} was created for it",
+                m.parent, m.triggers, m.dest),
                 ))
             }
 
             Occupied(e) => {
-                e.into_mut().mappings.insert(
-                    m.opt_name,
+                e.into_mut().mappings.push(
                     Mapping {
+                        triggers: m.triggers,
                         description: m.description,
                         to: m.dest,
                     },
@@ -288,11 +292,16 @@ fn section_test() {
 fn mapping_test() {
     assert_eq!(mapping(b" [ a (b) -> c ] adf"), IResult::Done(&b""[..], PartialDTreeOption{
         parent: String::from("a"), description: String::from("adf"),
-        opt_name: String::from("b"), dest: String::from("c")}));
+        triggers: vec!(String::from("b")), dest: String::from("c")}));
 
     assert_eq!(mapping(b"[ a123 (b\\)a\\d)->c] adf \\\nhello\na"),
         IResult::Done(&b"\na"[..], PartialDTreeOption{parent: String::from("a123"),
-        description: String::from("adf \nhello"), opt_name: String::from("b)a\\d"),
+        description: String::from("adf \nhello"), triggers: vec!(String::from("b)a\\d")),
+        dest: String::from("c")}));
+
+    assert_eq!(mapping(b"[ a123 (b) | (e)->c] adf"),
+        IResult::Done(&b""[..], PartialDTreeOption{parent: String::from("a123"),
+        description: String::from("adf"), triggers: vec!(String::from("b"), String::from("e")),
         dest: String::from("c")}));
 
 }
