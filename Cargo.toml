@@ -5,9 +5,10 @@ version = "0.1.0"
 authors = ["Russell Greene <russellgreene8@gmail.com>"]
 license-file = "LICENSE"
 repository = "https://github.com/russelltg/dtree"
+edition = "2018"
 
 [dependencies]
-nom = "^3.2"
+nom = "4"
 
 [lib]
 name = "dtree"

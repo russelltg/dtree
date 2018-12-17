@@ -31,7 +31,6 @@ pub struct Tree {
 }
 
 impl Mapping {
-
     /// Check if a mapping contains a given trigger
     pub fn has_trigger(&self, trigger: &str) -> bool {
         for t in &self.triggers {
@@ -39,12 +38,11 @@ impl Mapping {
                 return true;
             }
         }
-        return false;
+        false
     }
 }
 
 impl Section {
-
     /// Get the destination node for a given trigger
     pub fn mapping<'a>(&'a self, trigger: &str) -> Option<&'a str> {
         for m in &self.mappings {
@@ -52,6 +50,6 @@ impl Section {
                 return Some(&m.to);
             }
         }
-        return None;
+        None
     }
 }
