@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use std::str;
 
 use nom::{
-    call, do_parse, error_position, multispace, named, opt, separated_list, space, tag, Context,
-    Err, ErrorKind, IResult,
+    call, do_parse, multispace, named, opt, separated_list, space, tag, Context, Err, ErrorKind,
+    IResult,
 };
 
 use crate::dtree::{Mapping, Section, Tree};

@@ -8,7 +8,7 @@ use std::io::{stdin, stdout};
 fn main() {
     let args: Vec<_> = env::args().collect();
 
-    if args.len() <= 1 {
+    if args.len() != 2 {
         eprintln!("Usage: dtree {{file.dtree}}");
         return;
     }
@@ -47,11 +47,15 @@ fn main() {
     loop {
         println!("{}", current_section.description);
 
+        if current_section.mappings.len() == 0 {
+            break;
+        }
+
         // print the options
         for mapping in &current_section.mappings {
             println!(
-                "({:?}) {}",
-                mapping.triggers,
+                "({}) {}",
+                mapping.triggers.join(", "),
                 mapping.description.replace(
                     "\n",
                     &(String::from("\n") + &" ".repeat(mapping.triggers.len() + 3))
